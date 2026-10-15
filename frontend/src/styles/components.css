@@ -1,0 +1,287 @@
+/* ==========================================================================
+ * 组件层 (Components)
+ * --------------------------------------------------------------------------
+ * 应用级布局与复用类。全部基于令牌，保留原有类名以便视图无缝迁移。
+ * 视觉目标：清晰的信息层级、克制的阴影、统一的间距与圆角、顺滑的过渡。
+ * ========================================================================== */
+
+/* ============================== 布局骨架 ============================== */
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+}
+
+/* ============================== 侧边栏 ============================== */
+.sidebar {
+  background: var(--ink-950);
+  color: #e8f0f8;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-image: linear-gradient(180deg, rgba(42, 139, 216, .14), rgba(42, 139, 216, 0) 220px);
+  z-index: var(--z-sticky);
+}
+.brand {
+  padding: var(--space-7) var(--space-5) var(--space-5);
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  display: flex;
+  align-items: center;
+}
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--brand-400), var(--brand-600));
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  margin-right: var(--space-3);
+  box-shadow: 0 6px 14px rgba(42, 139, 216, .35);
+}
+.brand-title { font-weight: var(--weight-bold); letter-spacing: .2px; font-size: var(--text-md); }
+
+.sidebar .el-menu {
+  border-right: 0;
+  background: transparent;
+  flex: 1;
+  padding: var(--space-4) var(--space-3);
+}
+.sidebar .el-menu-item {
+  color: #b9c6d4;
+  margin: var(--space-1) 0;
+  border-radius: var(--radius-md);
+  height: 46px;
+  transition: background-color var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard);
+}
+.sidebar .el-menu-item:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.sidebar .el-menu-item.is-active {
+  background: linear-gradient(90deg, var(--brand-600), var(--brand-500));
+  color: #fff;
+  font-weight: var(--weight-semibold);
+  box-shadow: 0 6px 16px rgba(42, 139, 216, .35);
+}
+.sidebar-foot {
+  color: #879cb3;
+  font-size: var(--text-xs);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+/* ============================== 顶栏 ============================== */
+.main-column { min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  height: var(--topbar-h);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--content-pad-x);
+  gap: var(--space-4);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  transition: background-color var(--dur-base) var(--ease-standard),
+              border-color var(--dur-base) var(--ease-standard);
+}
+.topbar-title { color: var(--color-text-muted); font-size: var(--text-sm); }
+.topbar-status { display: flex; gap: var(--space-3); align-items: center; }
+
+/* ============================== 页面容器 ============================== */
+.page {
+  padding: var(--space-7) var(--content-pad-x) var(--space-10);
+  max-width: var(--page-max);
+  margin: 0 auto;
+  width: 100%;
+  animation: page-in var(--dur-slow) var(--ease-out) both;
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+}
+.page-heading h1 { margin: 0 0 var(--space-1); font-size: var(--text-2xl); color: var(--color-text-strong); font-weight: var(--weight-bold); }
+.page-heading p { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+
+/* ============================== 面板 / 卡片 ============================== */
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--dur-base) var(--ease-standard),
+              box-shadow var(--dur-base) var(--ease-standard);
+}
+.panel:has(> .el-table) { overflow-x: auto; }
+.panel > .el-table { min-width: 900px; }
+
+/* ============================== 工具条 ============================== */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+.toolbar .el-input,
+.toolbar .el-select { max-width: 270px; }
+
+/* ============================== 文本工具类 ============================== */
+.muted { color: var(--color-text-muted); }
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ============================== 单元格操作 ============================== */
+.cell-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+
+/* ============================== 分页 ============================== */
+.pagination { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
+
+/* ============================== 指标卡 ============================== */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.metric {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-5);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.metric::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-300));
+  opacity: .9;
+}
+.metric-label { color: var(--color-text-muted); font-size: var(--text-sm); }
+.metric-value { font-size: var(--text-3xl); font-weight: var(--weight-bold); margin-top: var(--space-2); color: var(--color-text-strong); line-height: 1.1; }
+
+/* ============================== 区块标题 ============================== */
+.section-title { margin: 0 0 var(--space-4); font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--color-text-strong); }
+
+/* ============================== 消息布局 ============================== */
+.messages-layout { display: grid; grid-template-columns: 235px minmax(0, 1fr); gap: var(--space-5); }
+.channel-list { max-height: calc(100vh - var(--topbar-h) - 120px); overflow: auto; }
+
+.channel-choice {
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  transition: background-color var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard);
+}
+.channel-choice:hover { background: var(--color-surface-2); }
+.channel-choice.active {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-soft-2);
+  color: var(--color-primary-active);
+  font-weight: var(--weight-semibold);
+}
+
+.message-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-3);
+  background: var(--color-surface);
+  transition: border-color var(--dur-fast) var(--ease-standard),
+              box-shadow var(--dur-fast) var(--ease-standard);
+}
+.message-card:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-xs); }
+.message-meta { display: flex; justify-content: space-between; gap: var(--space-3); color: var(--color-text-muted); font-size: var(--text-xs); }
+.message-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: var(--leading-relaxed); margin: var(--space-3) 0; color: var(--color-text); }
+
+/* ============================== 登录页 ============================== */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, var(--brand-100), transparent 60%),
+    linear-gradient(160deg, var(--brand-50), var(--color-bg));
+  padding: var(--space-5);
+}
+html.dark .login-page {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(42, 139, 216, .18), transparent 60%),
+    linear-gradient(160deg, #0e1622, #0b1119);
+}
+.login-card {
+  width: min(100%, 420px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-lg);
+}
+.login-card h1 { font-size: var(--text-xl); margin: 0 0 var(--space-2); }
+.login-card p { color: var(--color-text-muted); margin: 0 0 var(--space-6); }
+
+/* ============================== 响应式 ============================== */
+@media (max-width: 1050px) {
+  .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .app-shell { grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr); }
+  .brand { padding: var(--space-5) var(--space-4); justify-content: center; }
+  .brand-title, .sidebar .nav-text, .sidebar-foot { display: none; }
+  .sidebar .el-menu-item { justify-content: center; padding: 0; }
+}
+@media (max-width: 700px) {
+  .app-shell { display: block; }
+  .sidebar {
+    position: static;
+    height: auto;
+    min-height: auto;
+    background-image: none;
+  }
+  .sidebar .el-menu { display: flex; overflow-x: auto; padding: var(--space-2); }
+  .sidebar .el-menu-item { min-width: 48px; }
+  .brand { display: none; }
+  .topbar { height: 58px; padding: 0 var(--space-4); justify-content: flex-end; }
+  .topbar-title { display: none; }
+  .page { padding: var(--space-5) var(--space-4); }
+  .messages-layout { grid-template-columns: 1fr; }
+  .channel-list { max-height: 135px; }
+  .metric-grid { gap: var(--space-2); }
+  .metric { padding: var(--space-4); }
+  .metric-value { font-size: var(--text-2xl); }
+}
+
+/* 暗色主题下侧边栏改用表面色，与页面背景拉开层次 */
+html.dark .sidebar {
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  background-image: linear-gradient(180deg, rgba(42, 139, 216, .12), rgba(42, 139, 216, 0) 220px);
+}

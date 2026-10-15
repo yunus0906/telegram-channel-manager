@@ -1,0 +1,92 @@
+/* ==========================================================================
+ * 基础层 (Base)
+ * --------------------------------------------------------------------------
+ * 全局 reset、根排版、滚动条、链接、焦点环与可访问性偏好。
+ * 仅使用令牌，不写死颜色。
+ * ========================================================================== */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color var(--dur-base) var(--ease-standard),
+              color var(--dur-base) var(--ease-standard);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+p { margin: 0; }
+
+a {
+  color: var(--color-link);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+a:hover { color: var(--color-primary-hover); text-decoration: underline; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+strong, b { font-weight: var(--weight-semibold); color: var(--color-text-strong); }
+
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/* 统一焦点可见性（键盘可达性） */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-primary);
+  border-radius: var(--radius-sm);
+}
+
+/* 滚动条（WebKit） */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--color-text-subtle); background-clip: content-box; }
+
+/* 选区 */
+::selection {
+  background: var(--color-primary-soft-2);
+  color: var(--color-text-strong);
+}
+
+/* 减少动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
