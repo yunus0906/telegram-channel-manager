@@ -7,7 +7,7 @@ from app.schemas.api import AppSettingsSchema, SettingsOut
 
 
 IMMEDIATE_FIELDS = ["history_sync_enabled", "realtime_enabled", "reconcile_interval_minutes", "log_level", "task_concurrency_limit"]
-NEXT_TASK_FIELDS = ["history_batch_size", "media_download_enabled", "media_save_directory", "export_directory", "default_export_format", "auto_export_enabled"]
+NEXT_TASK_FIELDS = ["history_batch_size", "history_batch_interval_seconds", "media_download_enabled", "media_save_directory", "export_directory", "default_export_format", "auto_export_enabled"]
 RESTART_FIELDS = ["startup_reconcile"]
 
 

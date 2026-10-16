@@ -61,7 +61,7 @@ onUnmounted(() => { live.subscribe([]); window.removeEventListener('tcm:event', 
 </script>
 
 <template>
-  <div class="page">
+  <div class="page messages-page">
     <div class="page-heading">
 <div><h1>消息内容</h1><p>本地消息按发布时间倒序展示；未下载的附件可按需获取</p></div><el-button :disabled="!channelId" @click="store.load">
 刷新
@@ -89,7 +89,7 @@ onUnmounted(() => { live.subscribe([]); window.removeEventListener('tcm:event', 
 </el-button>
         </div>
         <el-alert v-if="error" :title="error" type="error" show-icon class="toolbar" />
-        <div v-loading="loading">
+        <div v-loading="loading" class="message-list">
           <el-empty v-if="!items.length && !loading" :description="channelId ? '该频道暂无符合条件的本地消息' : '请选择频道'" />
           <article v-for="message in items" :key="message.telegram_message_id" class="message-card">
             <div class="message-meta">

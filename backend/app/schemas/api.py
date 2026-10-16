@@ -148,6 +148,7 @@ class AppSettingsSchema(BaseModel):
     startup_reconcile: bool = True
     reconcile_interval_minutes: int = Field(default=60, ge=5, le=10080)
     history_batch_size: int = Field(default=100, ge=10, le=500)
+    history_batch_interval_seconds: float = Field(default=0.3, ge=0, le=60)
     media_download_enabled: bool = True
     media_save_directory: str = "media"
     export_directory: str = "exports"

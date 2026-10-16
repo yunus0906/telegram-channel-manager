@@ -22,7 +22,8 @@ const restartFields = ref<string[]>([])
 const logFile = ref('')
 const fieldLabels: Record<keyof AppSettings, string> = {
   history_sync_enabled: '历史同步', realtime_enabled: '实时监听', startup_reconcile: '启动校准',
-  reconcile_interval_minutes: '校准间隔', history_batch_size: '扫描批次', media_download_enabled: '媒体下载',
+  reconcile_interval_minutes: '校准间隔', history_batch_size: '扫描批次', history_batch_interval_seconds: '批次间隔',
+  media_download_enabled: '媒体下载',
   media_save_directory: '媒体目录', export_directory: '导出目录', default_export_format: '默认格式',
   auto_export_enabled: '自动导出', log_level: '日志级别', task_concurrency_limit: '任务并发限制',
 }
@@ -36,6 +37,7 @@ const rules: FormRules<AppSettings> = {
   export_directory: [{ required: true, validator: safeDirectory, trigger: 'blur' }],
   reconcile_interval_minutes: [{ type: 'number', min: 5, max: 10080, required: true, trigger: 'change' }],
   history_batch_size: [{ type: 'number', min: 10, max: 500, required: true, trigger: 'change' }],
+  history_batch_interval_seconds: [{ type: 'number', min: 0, max: 60, required: true, trigger: 'change' }],
   task_concurrency_limit: [{ type: 'number', min: 1, max: 4, required: true, trigger: 'change' }],
 }
 async function load(): Promise<void> {
@@ -217,6 +219,9 @@ Telegram 账号连接
 </el-form-item>
       <el-form-item label="历史扫描批次" prop="history_batch_size">
 <el-input-number v-model="values.history_batch_size" :min="10" :max="500" />
+</el-form-item>
+      <el-form-item label="批次间隔（秒）" prop="history_batch_interval_seconds">
+<el-input-number v-model="values.history_batch_interval_seconds" :min="0" :max="60" :step="0.1" :precision="1" />
 </el-form-item>
       <el-form-item label="允许媒体下载">
 <el-switch v-model="values.media_download_enabled" />

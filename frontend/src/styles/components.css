@@ -262,6 +262,29 @@
 .messages-layout { display: grid; grid-template-columns: 235px minmax(0, 1fr); gap: var(--space-5); }
 .channel-list { max-height: calc(100vh - var(--topbar-h) - 120px); overflow: auto; }
 
+/* 消息列表在页面内滚动：顶部标题 / 工具条 / 分页固定，仅列表区内部滚动，避免整页过长 */
+.messages-page {
+  height: calc(100vh - var(--topbar-h));
+  display: flex;
+  flex-direction: column;
+}
+.messages-page .page-heading { flex: 0 0 auto; }
+.messages-page .messages-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.messages-page .messages-layout > .panel:not(.channel-list) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.messages-page .message-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
 .channel-choice {
   width: 100%;
   text-align: left;

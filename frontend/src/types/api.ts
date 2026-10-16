@@ -27,7 +27,7 @@ export interface Dashboard {
 }
 export interface AppSettings {
   history_sync_enabled: boolean; realtime_enabled: boolean; startup_reconcile: boolean; reconcile_interval_minutes: number
-  history_batch_size: number; media_download_enabled: boolean; media_save_directory: string; export_directory: string
+  history_batch_size: number; history_batch_interval_seconds: number; media_download_enabled: boolean; media_save_directory: string; export_directory: string
   default_export_format: 'json' | 'jsonl' | 'zip'; auto_export_enabled: boolean; log_level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
   task_concurrency_limit: number
 }

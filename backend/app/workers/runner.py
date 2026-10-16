@@ -177,7 +177,9 @@ class TaskRunner:
         while True:
             if not await self._can_continue(task_id):
                 return
-            batch_size = (await self.settings.get()).values.history_batch_size
+            values = (await self.settings.get()).values
+            batch_size = values.history_batch_size
+            batch_interval = values.history_batch_interval_seconds
             try:
                 async with asyncio.timeout(60):
                     batch = [item async for item in client.iter_messages(entity, limit=batch_size, offset_id=cursor or 0)]
@@ -208,7 +210,8 @@ class TaskRunner:
             await self._broadcast_task(current, "sync.progress")
             if len(batch) < batch_size:
                 break
-            await asyncio.sleep(0.3)
+            if batch_interval > 0:
+                await asyncio.sleep(batch_interval)
 
     async def _record_retry(self, task_id: str) -> None:
         async with self.sessions() as session:
