@@ -38,6 +38,21 @@ class TelegramStatus(BaseModel):
     configured: bool
     last_error: str | None = None
     needs_password: bool = False
+    account: str | None = None
+    account_name: str | None = None
+
+
+class TelegramAccount(BaseModel):
+    key: str
+    phone: str | None
+    name: str | None
+    username: str | None
+    active: bool
+    legacy: bool
+
+
+class TelegramAccountIn(BaseModel):
+    account: str = Field(min_length=1, max_length=64)
 
 
 class AvailableChannel(BaseModel):
@@ -147,6 +162,7 @@ class SettingsOut(BaseModel):
     immediate_fields: list[str]
     next_task_fields: list[str]
     restart_fields: list[str]
+    log_file: str = ""
 
 
 class ActionResult(BaseModel):

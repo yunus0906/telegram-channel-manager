@@ -1,12 +1,13 @@
 # Telegram Channel Manager
 
-本地部署的 Telegram 频道管理与内容同步平台。它只使用当前已授权账号能够访问的频道；频道和消息的业务事实保存在 SQLite，网页关闭后后台任务继续运行。前端为中文 Vue 3 管理界面，后端为 FastAPI、Telethon 1.x 和单进程持久任务执行器。
+本地部署的 Telegram 频道管理与内容同步平台。它只使用当前已授权账号能够访问的频道；频道和消息的业务事实保存在 SQLite 或 MySQL，网页关闭后后台任务继续运行。前端为中文 Vue 3 管理界面，后端为 FastAPI、Telethon 1.x 和单进程持久任务执行器。
 
 ## 运行环境
 
 - Python 3.11 或 3.12；本项目在 Python 3.12.4 下开发。
 - Node.js 20.19+ 或 22.12+；本项目在 Node.js 24 下开发。
 - 默认仅监听 `127.0.0.1`，不需要 Docker。
+- 数据库默认使用 SQLite；MySQL 模式支持 MySQL 8.0+，数据库须预先创建。
 - Telegram `TG_API_ID`、`TG_API_HASH` 和能够访问目标频道的用户账号。没有它们时，仍可浏览及导出数据库里已有的内容。
 
 ## 首次配置
@@ -23,6 +24,24 @@ uv sync --frozen --extra test --python 3.12
 把密码脚本输出写入 `ADMIN_PASSWORD_HASH`，把随机字符串写入 `SESSION_SECRET`。密码明文不要写入 `.env`。管理员密码哈希和会话密钥是必填项；缺少时后端拒绝启动。Telegram 凭证填入 `TG_API_ID` 与 `TG_API_HASH`，也可稍后再填。`TG_API_ID` 和 `TG_API_HASH` 只在后端读取。如果直连 Telegram 超时，在后端 `.env` 中设置 `TG_PROXY_URL=http://127.0.0.1:10809`（也支持 `socks4://`、`socks5://`），然后安装更新后的后端依赖并重启后端。代理须允许连接 Telegram 的 TCP 端口；留空则直连。
 
 如果没有 `uv`，可在 `backend` 目录运行 `python -m venv .venv`，再用虚拟环境的 Python 执行 `-m pip install -r requirements.txt`。`pyproject.toml` 声明兼容范围，`uv.lock` 锁定本次安装解析出的版本；`requirements.txt` 提供 pip 入口。
+
+### 数据库选择
+
+默认 `DB_TYPE=sqlite`，数据库文件为 `DATA_ROOT/manager.sqlite3`。需要其他 SQLite 文件时可设置 `DATABASE_URL=sqlite+aiosqlite:///绝对路径`；留空使用默认位置。
+
+使用 MySQL 时，先在 MySQL 8.0+ 创建一个使用 `utf8mb4` 的空数据库，并给应用账号授予该库的建表、修改表、索引和读写权限，然后在 `backend/.env` 中设置：
+
+```dotenv
+DB_TYPE=mysql
+DATABASE_URL=
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=manager
+MYSQL_PASSWORD=填写数据库密码
+MYSQL_DATABASE=manager
+```
+
+MySQL 模式下 `MYSQL_HOST`、`MYSQL_USER`、`MYSQL_PASSWORD` 和 `MYSQL_DATABASE` 必须填写，`DATABASE_URL` 必须留空。应用使用 `utf8mb4` 和 UTC 会话时区；启动时在所选数据库执行 Alembic `upgrade head`。也可在 `backend` 目录手动运行 `& .\.venv\Scripts\python.exe -m alembic upgrade head`，该命令读取同一份 `.env`。连接失败时启动报错，不会切换回 SQLite。切换数据库不复制数据；原 SQLite 文件保留，MySQL 从空库开始。
 
 ## 启动
 
@@ -51,10 +70,10 @@ npm run dev
 ## 功能与数据约定
 
 - “发现频道”读取授权账号实际可访问的频道或超级群；私有频道只显示标题、Chat ID 和授权访问状态，不构造公开链接。添加频道不会自动启动同步。
-- 历史同步和校准按 Telegram 消息 ID 从新到旧分批扫描。每批的消息、事件和任务游标在同一 SQLite 事务内提交；重启会把运行中的任务重新排队，从已提交游标继续。消息以频道和 Telegram 消息 ID 唯一约束去重，内容相同不产生编辑事件。
+- 历史同步和校准按 Telegram 消息 ID 从新到旧分批扫描。每批的消息、事件和任务游标在同一数据库事务内提交；重启会把运行中的任务重新排队，从已提交游标继续。消息以频道和 Telegram 消息 ID 唯一约束去重，内容相同不产生编辑事件。
 - 一个后端进程只有一个 Telethon 客户端和一组全局新消息/编辑监听器。监听仅处理已管理且启用监听的频道。服务恢复后为监听频道排队校准。FloodWait 遵守 Telegram 等待时间，连续失败次数有上限；不使用规避限流的方式。
 - 大任务由 HTTP 创建并返回任务 ID。运行中的历史同步和校准可在批次间暂停或取消；运行中的媒体下载和导出不提供暂停/取消，等待中的任务可以取消。任务状态、进度和错误保存在数据库中。
-- JSON 快照来自 SQLite，`schema_version` 为 1。频道 ID 和消息 ID 在 API 与导出中均为字符串。JSONL 每行都有稳定 `event_id`。后台追加事件文件时先 `flush`/`fsync`，再标记数据库事件已导出；崩溃窗口可能产生重复行，消费端应按事件 ID 去重。可创建 JSONL 导出任务从 SQLite 重新生成事件文件。
+- JSON 快照来自所选数据库，`schema_version` 为 1。频道 ID 和消息 ID 在 API 与导出中均为字符串。JSONL 每行都有稳定 `event_id`。后台追加事件文件时先 `flush`/`fsync`，再标记数据库事件已导出；崩溃窗口可能产生重复行，消费端应按事件 ID 去重。可创建 JSONL 导出任务从数据库重新生成事件文件。
 - 导出支持单频道或所有已管理频道的 JSON、JSONL、JSON 加已下载媒体的 ZIP，以及单频道仅媒体 ZIP。快照写入临时文件并原子替换。ZIP 内路径由程序生成；媒体与导出下载路径必须落在 `DATA_ROOT` 下。
 - `MEDIA_MAX_BYTES` 默认 100 MiB。历史扫描不会自动下载媒体，附件可从消息页单独创建下载任务。
 - WebSocket `/api/v1/ws` 使用管理员 Cookie 和 Origin 校验。消息事件按频道订阅，前端重连后重新通过 REST 获取状态。事件通知不会作为持久数据来源。
@@ -62,6 +81,10 @@ npm run dev
 ## 安全与部署
 
 管理员登录使用 Argon2 密码哈希、12 小时 HttpOnly SameSite Cookie、CSRF 请求头和登录/验证码/导出频率限制。敏感操作不记录验证码、密码、API Hash 或消息正文。Windows 上会尝试用 `icacls` 将 Telethon session 文件权限限制为当前用户；其他系统使用 `0600`。session 失效时可在设置页重新授权。
+
+后端日志同时写到控制台和 `DATA_ROOT/logs/backend.log`（单文件 5 MiB，保留 3 份历史，UTF-8）。失败请求的响应体带 `error.detail`（异常类名），完整堆栈只进日志文件，两处都不包含验证码、密码、API Hash、session 内容或消息正文。Telegram 相关的异常会被翻译成可执行的排查提示（例如手机号缺国家码、FloodWait 剩余秒数、API 凭证被判为公开）。Telethon 自身的日志级别下限固定为 INFO，避免 DEBUG 级别把消息正文写进文件。
+
+Telegram 账号按手机号隔离 session：`+8613800000000` 的 session 位于 `DATA_ROOT/accounts/8613800000000/telegram.session`，账号列表与当前活动账号记在 `DATA_ROOT/accounts/index.json`。旧版单文件 `DATA_ROOT/telegram.session` 作为 `legacy` 账号继续使用，不会自动迁移或删除。这样每个账号保有各自的授权态，登录新账号时用的是全新空 session，不再受 Telethon `sign_in()` 已授权即返回旧用户的限制。同一时刻只有一个活动账号（保持单进程单客户端）；`POST /api/v1/telegram/accounts/activate` 只切换使用哪份 session，`/accounts/remove` 也只删除本机文件，两者都不会终止 Telegram 端的登录态。频道记录仍全局共用，某频道只有在当前活动账号有权访问时才能同步。
 
 媒体与导出目录只能设置为 `DATA_ROOT` 下的安全相对路径。修改目录不会使已下载文件失联，因为数据库保存的是相对于 `DATA_ROOT` 的路径。删除本地数据要求输入完整 Chat ID；移出管理列表保留本地数据。
 
@@ -80,10 +103,12 @@ npm run lint
 npm test
 ```
 
-自动化测试使用临时 SQLite 和模拟 Telegram 客户端，覆盖认证、频道离线读取、同步游标、去重、编辑、FloodWait、导出格式与文件路径。真实账号仍需按以下步骤人工验收：填入 Telegram 凭证，完成验证码及可能的两步验证；发现并添加一个有权访问的频道；启动历史同步并观察任务；启用监听后确认新消息与编辑；断网重启后执行校准；按需下载附件并检查 JSON/JSONL/ZIP。
+默认自动化测试使用临时 SQLite 和模拟 Telegram 客户端，覆盖认证、频道离线读取、同步游标、去重、编辑、FloodWait、导出格式与文件路径。真实账号仍需按以下步骤人工验收：填入 Telegram 凭证，完成验证码及可能的两步验证；发现并添加一个有权访问的频道；启动历史同步并观察任务；启用监听后确认新消息与编辑；断网重启后执行校准；按需下载附件并检查 JSON/JSONL/ZIP。
+
+MySQL 集成测试需要专用测试库。设置环境变量 `TCM_TEST_MYSQL_URL=mysql+aiomysql://用户:URL编码后的密码@主机:3306/tcm_test_名称` 后运行后端 `pytest`；测试只接受 `tcm_test` 或 `tcm_test_` 开头的库名，并验证迁移、同步、认证、UTC 时间和导出。未设置时该测试跳过。
 
 ## 备份、恢复和限制
 
-备份前停止后端，然后复制整个 `backend/data`（或自定义 `DATA_ROOT`），包括 SQLite、session、媒体和导出文件。恢复时停止后端，将备份放回同一路径，检查文件权限，再启动后端；Alembic 会升级旧数据库。不要把备份或 session 提交到 Git。
+备份前停止后端。SQLite 模式下复制整个 `backend/data`（或自定义 `DATA_ROOT`），包括数据库、session、媒体和导出文件。MySQL 模式下分别备份 MySQL 数据库和 `DATA_ROOT` 中的 session、媒体与导出文件。恢复时停止后端，恢复所选数据库及文件，检查文件权限，再启动后端；Alembic 会升级旧数据库。不要把备份或 session 提交到 Git。
 
-当前实现不会把 Telegram 端已删除的消息自动从本地档案删除；历史校准用于补漏和更新编辑内容。完整端到端 Telegram 登录、实时事件与下载需要实际凭证及可访问频道才能验证。单进程 SQLite 架构适合本项目预期的小规模频道，不支持多个后端实例共享同一 session 或任务队列。
+当前实现不会把 Telegram 端已删除的消息自动从本地档案删除；历史校准用于补漏和更新编辑内容。完整端到端 Telegram 登录、实时事件与下载需要实际凭证及可访问频道才能验证。项目仍采用单后端进程，不支持多个实例共享同一 Telegram session 或任务执行器。

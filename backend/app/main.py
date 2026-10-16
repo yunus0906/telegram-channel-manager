@@ -11,6 +11,7 @@ from app.api import auth, channels, dashboard, exports, messages, settings as se
 from app.core.auth import AuthService, RateLimiter
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError, app_error_handler
+from app.core.logging import configure_logging, set_log_level
 from app.db.session import Database
 from app.schemas.api import Health
 from app.services.export_service import ExportService
@@ -33,6 +34,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings.host not in {"127.0.0.1", "localhost", "::1"} and not settings.cookie_secure:
         raise RuntimeError("非本机监听必须启用 COOKIE_SECURE 并使用 HTTPS 反向代理")
 
+    log_file = configure_logging(settings)
+
     db = Database(settings)
     hub = EventHub()
     telegram_manager = TelegramManager(settings)
@@ -46,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         await asyncio.to_thread(db.migrate)
+        set_log_level((await app_settings.get()).values.log_level)
         await runner.start()
         try:
             yield
@@ -55,6 +59,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Telegram Channel Manager", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
+    app.state.log_file = str(log_file)
     app.state.db = db
     app.state.hub = hub
     app.state.telegram = telegram_manager
@@ -88,7 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unexpected_error(_request: Request, exc: Exception):
-        logger.error("请求处理失败: %s", type(exc).__name__)
+        logger.error("请求处理失败: %s", type(exc).__name__, exc_info=True)
         return JSONResponse(status_code=500, content={"error": {"code": "internal_error", "message": "服务器处理请求失败"}})
 
     @app.get("/api/v1/health", response_model=Health)

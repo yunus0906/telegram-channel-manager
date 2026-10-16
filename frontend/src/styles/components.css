@@ -100,11 +100,16 @@
   max-width: var(--page-max);
   margin: 0 auto;
   width: 100%;
-  animation: page-in var(--dur-slow) var(--ease-out) both;
+  /* 注意：动画结束后不得保留 transform。
+     带着非 none 的 transform（哪怕只是 translateY(0)）会让 .page 成为
+     position: fixed 后代的包含块，使 el-dialog 的 .el-overlay 只能覆盖 .page
+     自身范围（页面偏矮时底部就露出空白），弹窗也会按 .page 而非视口居中。
+     因此这里用 backwards 填充，且 to 帧不声明 transform。 */
+  animation: page-in var(--dur-slow) var(--ease-out) backwards;
 }
 @keyframes page-in {
   from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; }
 }
 .page-heading {
   display: flex;
@@ -184,6 +189,74 @@
 
 /* ============================== 区块标题 ============================== */
 .section-title { margin: 0 0 var(--space-4); font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--color-text-strong); }
+
+/* ============================== 多账号列表 ============================== */
+/* 用于「系统设置 → Telegram 账号连接」：把多个已保存账号表达为可辨识的卡片行，
+   身份信息（左）与操作（右）分区，活动账号用品牌色底 + 左侧强调条标识。 */
+.account-block { margin-bottom: var(--space-5); }
+.account-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.account-title { margin: 0; font-size: var(--text-md); font-weight: var(--weight-semibold); color: var(--color-text-strong); }
+.account-head .muted { font-size: var(--text-sm); }
+
+.account-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.account-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color var(--dur-fast) var(--ease-standard),
+              background-color var(--dur-fast) var(--ease-standard);
+}
+.account-item:hover { border-color: var(--color-border-strong); }
+.account-item.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.account-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-3);
+  color: var(--color-text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.account-item.is-active .account-avatar { background: var(--color-primary); color: #fff; }
+
+.account-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.account-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+}
+.account-meta { color: var(--color-text-muted); overflow-wrap: anywhere; }
+.account-actions { flex: none; display: flex; gap: var(--space-2); }
+
+.account-empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  text-align: center;
+}
 
 /* ============================== 消息布局 ============================== */
 .messages-layout { display: grid; grid-template-columns: 235px minmax(0, 1fr); gap: var(--space-5); }
@@ -277,6 +350,8 @@ html.dark .login-page {
   .metric-grid { gap: var(--space-2); }
   .metric { padding: var(--space-4); }
   .metric-value { font-size: var(--text-2xl); }
+  .account-item { flex-wrap: wrap; }
+  .account-actions { width: 100%; justify-content: flex-end; }
 }
 
 /* 暗色主题下侧边栏改用表面色，与页面背景拉开层次 */

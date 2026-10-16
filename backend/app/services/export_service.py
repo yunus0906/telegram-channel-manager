@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config import Settings
 from app.core.errors import AppError
 from app.core.paths import within_root
-from app.db.models import Channel, MediaFile, Message, SyncEvent, SyncTask, utcnow
+from app.db.models import Channel, MediaFile, Message, SyncEvent, SyncTask, as_utc, utcnow
 from app.services.message_store import iso
 from app.services.settings_service import SettingsService
 
@@ -71,9 +71,9 @@ class ExportService:
     @staticmethod
     def _date_stmt(stmt, options: dict[str, Any], field):
         if options.get("date_from"):
-            stmt = stmt.where(field >= datetime.fromisoformat(options["date_from"]))
+            stmt = stmt.where(field >= as_utc(datetime.fromisoformat(options["date_from"])))
         if options.get("date_to"):
-            stmt = stmt.where(field <= datetime.fromisoformat(options["date_to"]))
+            stmt = stmt.where(field <= as_utc(datetime.fromisoformat(options["date_to"])))
         return stmt
 
     async def _write_json(self, target: Path, channel_id: int | None, options: dict[str, Any]) -> None:

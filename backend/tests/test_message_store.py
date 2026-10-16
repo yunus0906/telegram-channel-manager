@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -56,4 +56,26 @@ async def test_cursor_commits_with_messages(tmp_path):
         task = await session.get(SyncTask, "task-1")
         assert task.cursor_message_id == 7
         assert task.processed_count == 1
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_message_dates_are_stored_as_utc(tmp_path):
+    db = Database(Settings(data_root=tmp_path, database_url=f"sqlite+aiosqlite:///{(tmp_path / 'utc.db').as_posix()}"))
+    async with db.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async with db.sessions() as session:
+        channel = Channel(telegram_chat_id=-100123, title="测试", access_type="private")
+        session.add(channel)
+        await session.commit()
+        channel_id = channel.id
+    offset = timezone(timedelta(hours=8))
+    msg = SimpleNamespace(id=7, date=datetime(2026, 1, 1, 8, 30, tzinfo=offset),
+                          edit_date=datetime(2026, 1, 1, 8, 45, tzinfo=offset), message="正文", views=None,
+                          forwards=None, reply_to_msg_id=None, photo=None, video=None, document=None)
+    await MessageStore(db.sessions).save_batch(channel_id, [msg])
+    async with db.sessions() as session:
+        row = await session.scalar(select(Message))
+        assert row.message_date.replace(tzinfo=timezone.utc) == datetime(2026, 1, 1, 0, 30, tzinfo=timezone.utc)
+        assert row.edit_date.replace(tzinfo=timezone.utc) == datetime(2026, 1, 1, 0, 45, tzinfo=timezone.utc)
     await db.close()

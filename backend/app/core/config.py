@@ -1,9 +1,11 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL, make_url
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -17,7 +19,13 @@ class Settings(BaseSettings):
     tg_proxy_url: str | None = None
     admin_password_hash: str = ""
     session_secret: str = ""
+    db_type: Literal["sqlite", "mysql"] = "sqlite"
     database_url: str | None = None
+    mysql_host: str = "127.0.0.1"
+    mysql_port: int = Field(default=3306, ge=1, le=65535)
+    mysql_user: str = ""
+    mysql_password: SecretStr = SecretStr("")
+    mysql_database: str = ""
     data_root: Path = BACKEND_ROOT / "data"
     host: str = "127.0.0.1"
     port: int = 8000
@@ -48,6 +56,18 @@ class Settings(BaseSettings):
             raise ValueError("TG_PROXY_URL 必须是带端口的 http://、socks4:// 或 socks5:// 地址")
         return value
 
+    @model_validator(mode="after")
+    def validate_database(self) -> "Settings":
+        if self.db_type == "mysql":
+            if self.database_url and self.database_url.strip():
+                raise ValueError("DB_TYPE=mysql 时不能设置 DATABASE_URL")
+            if not self.mysql_host.strip() or not self.mysql_user.strip() or not self.mysql_password.get_secret_value().strip() or not self.mysql_database.strip():
+                raise ValueError("DB_TYPE=mysql 时必须配置 MYSQL_HOST、MYSQL_USER、MYSQL_PASSWORD 和 MYSQL_DATABASE")
+        elif self.database_url and self.database_url.strip():
+            if make_url(self.database_url).drivername != "sqlite+aiosqlite":
+                raise ValueError("DB_TYPE=sqlite 时 DATABASE_URL 必须使用 sqlite+aiosqlite")
+        return self
+
     @property
     def telegram_proxy(self) -> tuple[str, str, int] | None:
         if not self.tg_proxy_url:
@@ -57,10 +77,16 @@ class Settings(BaseSettings):
         return parsed.scheme, parsed.hostname, parsed.port
 
     @property
-    def sqlite_url(self) -> str:
-        if self.database_url:
-            return self.database_url
-        return f"sqlite+aiosqlite:///{(self.data_root / 'manager.sqlite3').as_posix()}"
+    def async_database_url(self) -> URL:
+        if self.db_type == "mysql":
+            return URL.create(
+                "mysql+aiomysql", username=self.mysql_user, password=self.mysql_password.get_secret_value(),
+                host=self.mysql_host, port=self.mysql_port, database=self.mysql_database,
+                query={"charset": "utf8mb4"},
+            )
+        if self.database_url and self.database_url.strip():
+            return make_url(self.database_url)
+        return URL.create("sqlite+aiosqlite", database=(self.data_root / "manager.sqlite3").as_posix())
 
     @property
     def allowed_origins(self) -> set[str]:

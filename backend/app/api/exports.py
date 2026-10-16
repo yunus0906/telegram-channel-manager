@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from app.api.deps import managed_channel, require_admin, require_csrf
 from app.api.tasks import task_out
 from app.core.errors import AppError
-from app.db.models import SyncTask
+from app.db.models import SyncTask, as_utc
 from app.schemas.api import ExportCreate, Page, TaskOut
 
 
@@ -18,7 +18,9 @@ async def create_export(data: ExportCreate, request: Request) -> TaskOut:
     ip = request.client.host if request.client else "unknown"
     if not request.app.state.limiter.allow(f"export:{ip}", 10, 3600):
         raise AppError(429, "rate_limited", "导出操作过于频繁，请稍后再试")
-    if data.date_from and data.date_to and data.date_from > data.date_to:
+    date_from = as_utc(data.date_from)
+    date_to = as_utc(data.date_to)
+    if date_from and date_to and date_from > date_to:
         raise AppError(422, "invalid_date_range", "开始日期不能晚于结束日期")
     if data.media_only and (data.format != "zip" or not data.include_media or not data.telegram_chat_id):
         raise AppError(422, "invalid_export_options", "仅媒体 ZIP 需要指定频道并包含媒体")
@@ -27,8 +29,8 @@ async def create_export(data: ExportCreate, request: Request) -> TaskOut:
         channel_id = (await managed_channel(request, data.telegram_chat_id)).id
     kind = {"json": "json_export", "jsonl": "jsonl_export", "zip": "zip_export"}[data.format]
     options = {"include_media": data.include_media, "media_only": data.media_only,
-               "date_from": data.date_from.isoformat() if data.date_from else None,
-               "date_to": data.date_to.isoformat() if data.date_to else None}
+               "date_from": date_from.isoformat() if date_from else None,
+               "date_to": date_to.isoformat() if date_to else None}
     task, _ = await request.app.state.tasks.create(kind, channel_id, options)
     return await task_out(request, task)
 

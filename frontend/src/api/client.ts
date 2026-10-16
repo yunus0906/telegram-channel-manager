@@ -1,5 +1,5 @@
 import axios, { type AxiosRequestConfig } from 'axios'
-import type { ApiError, AppSettings, AuthMe, AvailableChannel, Channel, Dashboard, Message, Page, SettingsResponse, Task, TelegramStatus } from '../types/api'
+import type { ApiError, AppSettings, AuthMe, AvailableChannel, Channel, Dashboard, Message, Page, SettingsResponse, Task, TelegramAccount, TelegramStatus } from '../types/api'
 
 const client = axios.create({ baseURL: import.meta.env.VITE_API_BASE || '/api/v1', withCredentials: true, timeout: 30000 })
 let csrfToken = ''
@@ -12,7 +12,11 @@ client.interceptors.request.use((config) => {
 })
 
 export function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiError>(error)) return error.response?.data?.error?.message || error.message
+  if (axios.isAxiosError<ApiError>(error)) {
+    const payload = error.response?.data?.error
+    if (payload) return payload.detail ? `${payload.message}（${payload.detail}）` : payload.message
+    return error.message
+  }
   return error instanceof Error ? error.message : '操作失败'
 }
 
@@ -28,6 +32,9 @@ export const api = {
   authLogout: () => post<{ ok: boolean }>('/auth/logout'),
   dashboard: () => get<Dashboard>('/dashboard'),
   telegramStatus: () => get<TelegramStatus>('/telegram/status'),
+  telegramAccounts: () => get<TelegramAccount[]>('/telegram/accounts'),
+  telegramActivate: (account: string) => post<TelegramStatus>('/telegram/accounts/activate', { account }),
+  telegramRemoveAccount: (account: string) => post<{ ok: boolean }>('/telegram/accounts/remove', { account }),
   telegramLogin: (phone: string) => post<TelegramStatus>('/telegram/login', { phone }),
   telegramVerify: (code?: string, password?: string) => post<TelegramStatus>('/telegram/login/verify', { code, password }),
   telegramDisconnect: () => post<TelegramStatus>('/telegram/disconnect'),

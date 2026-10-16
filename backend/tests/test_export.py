@@ -64,3 +64,24 @@ async def test_media_only_zip_contains_downloaded_media_without_json(tmp_path):
     with zipfile.ZipFile(path) as archive:
         assert archive.namelist() == ["media/-100123/4.bin"]
     await db.close()
+
+
+@pytest.mark.asyncio
+async def test_export_date_filter_normalizes_offset_to_utc(tmp_path):
+    settings = Settings(data_root=tmp_path, database_url=f"sqlite+aiosqlite:///{(tmp_path / 'dates.db').as_posix()}")
+    db = Database(settings)
+    async with db.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async with db.sessions() as session:
+        channel = Channel(telegram_chat_id=-100123, title="私有", access_type="private")
+        session.add(channel)
+        await session.flush()
+        session.add(Message(channel_id=channel.id, telegram_message_id=4,
+                            message_date=datetime(2026, 1, 1, 0, 30, tzinfo=timezone.utc), text="in range", raw_metadata={}))
+        task = SyncTask(id="dated-export", channel_id=channel.id, task_type="json_export", status="running",
+                        options={"date_from": "2026-01-01T08:00:00+08:00", "date_to": "2026-01-01T09:00:00+08:00"})
+        session.add(task)
+        await session.commit()
+    path = await ExportService(settings, db.sessions, SettingsService(db.sessions)).generate(task)
+    assert [item["message_id"] for item in json.loads(path.read_text(encoding="utf-8"))["messages"]] == ["4"]
+    await db.close()

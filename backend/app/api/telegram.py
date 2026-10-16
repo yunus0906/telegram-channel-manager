@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import require_admin, require_csrf
 from app.core.errors import AppError
-from app.schemas.api import TelegramLoginIn, TelegramMe, TelegramStatus, TelegramVerifyIn
+from app.schemas.api import (ActionResult, TelegramAccount, TelegramAccountIn, TelegramLoginIn, TelegramMe,
+                             TelegramStatus, TelegramVerifyIn)
 
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
@@ -58,4 +59,23 @@ async def reconnect(request: Request) -> TelegramStatus:
 @router.get("/me", response_model=TelegramMe, dependencies=[Depends(require_admin)])
 async def telegram_me(request: Request) -> TelegramMe:
     return TelegramMe.model_validate(await request.app.state.telegram.me())
+
+
+@router.get("/accounts", response_model=list[TelegramAccount], dependencies=[Depends(require_admin)])
+async def accounts(request: Request) -> list[TelegramAccount]:
+    return request.app.state.telegram.accounts()
+
+
+@router.post("/accounts/activate", response_model=TelegramStatus, dependencies=[Depends(require_csrf)])
+async def activate_account(data: TelegramAccountIn, request: Request) -> TelegramStatus:
+    result = await request.app.state.telegram.activate(data.account)
+    await publish_status(request, result)
+    return result
+
+
+@router.post("/accounts/remove", response_model=ActionResult, dependencies=[Depends(require_csrf)])
+async def remove_account(data: TelegramAccountIn, request: Request) -> ActionResult:
+    await request.app.state.telegram.remove_account(data.account)
+    await publish_status(request, await request.app.state.telegram.status())
+    return ActionResult()
 

@@ -35,9 +35,9 @@ async def query_messages(channel_id: str, request: Request, page: int, page_size
         escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         stmt = stmt.where(Message.text.ilike(f"%{escaped}%", escape="\\"))
     if date_from:
-        stmt = stmt.where(Message.message_date >= date_from)
+        stmt = stmt.where(Message.message_date >= as_utc(date_from))
     if date_to:
-        stmt = stmt.where(Message.message_date <= date_to)
+        stmt = stmt.where(Message.message_date <= as_utc(date_to))
     if media_type == "text":
         stmt = stmt.where(Message.media_type.is_(None))
     elif media_type in {"photo", "video", "document", "other"}:

@@ -6,14 +6,15 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.db.models import Channel, Message, SyncEvent, SyncTask, utcnow
+from app.db.models import Channel, Message, SyncEvent, SyncTask, utcnow, as_utc
 
 
 BUSINESS_FIELDS = ("text", "edit_date", "media_type", "reply_to_message_id")
 
 
 def message_changed(old: dict[str, Any], new: dict[str, Any]) -> bool:
-    return any(old.get(field) != new.get(field) for field in BUSINESS_FIELDS)
+    return any((as_utc(old.get(field)) != as_utc(new.get(field)) if field == "edit_date"
+                else old.get(field) != new.get(field)) for field in BUSINESS_FIELDS)
 
 
 def iso(value: datetime | None) -> str | None:
@@ -61,7 +62,7 @@ class MessageStore:
                         ))
                         data = {
                             "text": source.message or "",
-                            "edit_date": source.edit_date,
+                            "edit_date": as_utc(source.edit_date),
                             "media_type": media_kind(source),
                             "reply_to_message_id": getattr(source, "reply_to_msg_id", None),
                             "views": getattr(source, "views", None),
@@ -72,7 +73,7 @@ class MessageStore:
                             row = Message(
                                 channel_id=channel_id,
                                 telegram_message_id=telegram_id,
-                                message_date=source.date,
+                                message_date=as_utc(source.date),
                                 permalink=f"https://t.me/{channel.username}/{telegram_id}" if channel.username else None,
                                 raw_metadata={},
                                 **data,
@@ -85,7 +86,7 @@ class MessageStore:
                                 change = "message.edited"
                             for key, value in data.items():
                                 setattr(row, key, value)
-                            row.message_date = source.date
+                            row.message_date = as_utc(source.date)
                             row.permalink = f"https://t.me/{channel.username}/{telegram_id}" if channel.username else None
                         if channel.last_message_id is None or telegram_id > channel.last_message_id:
                             channel.last_message_id = telegram_id

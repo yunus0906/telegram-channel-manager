@@ -65,6 +65,9 @@ onUnmounted(() => { window.removeEventListener('tcm:refresh', refresh); window.r
         <el-descriptions-item label="最近成功同步">
 {{ data?.last_successful_sync_at ? new Date(data.last_successful_sync_at).toLocaleString() : '暂无' }}
 </el-descriptions-item>
+        <el-descriptions-item label="当前账号">
+{{ data?.telegram.account_name || data?.telegram.account || '未登录' }}
+</el-descriptions-item>
         <el-descriptions-item label="最近连接错误">
 {{ data?.telegram.last_error || '无' }}
 </el-descriptions-item>
